@@ -1,5 +1,8 @@
 /**
-* Errean - A wrapper around std::optional with inverted boolean conversion
+ * Errean - A wrapper around std::optional with inverted boolean conversion. _Sort_ of like a boolean but
+ * it makes it so you can return a truthy/falsy value. If falsy then the errean contains an error. If true
+ * then it doesn't.
+ * 
  * Tags: errean, optional, error-handling
  */
 

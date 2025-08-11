@@ -1,5 +1,7 @@
 /**
- * Tags: either
+ * A return type for either a value or an error.
+ * 
+ * Tags: either, error-handling
  */
 
 #pragma once
