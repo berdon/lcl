@@ -10,7 +10,7 @@ int main(int argc, char const* argv[])
 
   try {
     auto command = cli.ParseArguments(argc, argv);
-    auto result = cli.ExecuteCommand(command, std::cout);
+    auto result = cli.ExecuteCommand(command, std::cout).await_resume();
 
     if (!result.success) {
       std::cerr << "Error: " << result.errorMessage << '\n';

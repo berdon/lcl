@@ -20,39 +20,21 @@ namespace lcl {
     // Constructors
     Errean() = default;
 
-    template <typename U = T>
-    Errean(U&& value) : opt(std::forward<U>(value)) {}
+    Errean(value_type value) : opt(value) {}
+
+    // template <typename U = T>
+    // Errean(U&& value) : opt(std::forward<U>(value)) {}
 
     Errean(std::nullopt_t) : opt(std::nullopt) {}
 
     // Constructor for bool: true maps to nullopt, false maps to value (if T is bool)
-    Errean(const bool value) {
-      opt = std::nullopt;
+    Errean(bool value) {
+      opt = value ? std::nullopt : std::optional<T>{ T() };
     }
 
     // Assignment operators
     Errean& operator=(std::nullopt_t) {
       opt = std::nullopt;
-      return *this;
-    }
-
-    template <typename U = T>
-    Errean& operator=(U&& value) {
-      opt = std::forward<U>(value);
-      return *this;
-    }
-
-    // Assignment for bool: true maps to nullopt, false maps to value (if T is bool)
-    Errean& operator=(bool value) {
-      if constexpr (std::is_same_v<T, bool>) {
-        if (!value) {
-          opt = false; // false becomes a valid bool value
-        } else {
-          opt = std::nullopt; // true becomes nullopt
-        }
-      } else {
-        static_assert(std::is_same_v<T, bool>, "Errean::operator=(bool) only valid for Errean<bool>");
-      }
       return *this;
     }
 

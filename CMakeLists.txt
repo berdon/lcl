@@ -43,6 +43,26 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(paho-mqtt-cpp)
 
+# Enable testing
+enable_testing()
+
+find_package(GTest QUIET)
+if (GTest_FOUND)
+    message(STATUS "Found system-installed Google Test")
+else()
+    # Option 2: Use FetchContent to download Google Test
+    include(FetchContent)
+    FetchContent_Declare(
+            googletest
+            GIT_REPOSITORY https://github.com/google/googletest.git
+            GIT_TAG release-1.12.1  # Use a stable release
+    )
+
+    # For Windows: Prevent overriding the parent project's compiler/linker settings
+    set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(googletest)
+endif()
+
 # Define ASIO as an interface library
 add_library(asio INTERFACE)
 target_include_directories(asio INTERFACE ${asio_SOURCE_DIR}/asio/include)
@@ -55,38 +75,8 @@ target_include_directories(cppcoro INTERFACE ${cppcoro_SOURCE_DIR}/include)
 find_package(Threads REQUIRED)
 target_link_libraries(asio INTERFACE Threads::Threads)
 
-# Define directories
-set(LCL_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/include)
-set(LCL_SOURCE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/src)
-
-# Include directories
-include_directories(${LCL_INCLUDE_DIR} ${PAHO_MQTT_C_INCLUDE_DIRS})
-
-# Source files
-set(LCL_SOURCES
-    ${LCL_SOURCE_DIR}/main.cpp
-    ${LCL_SOURCE_DIR}/cli/CLI.cpp
-    ${LCL_SOURCE_DIR}/provider/ZigbeeProvider.cpp
-    ${LCL_SOURCE_DIR}/provider/MqttProvider.cpp
-    ${LCL_SOURCE_DIR}/zigbee/adapter/ZStack/ZStackAdapter.cpp
-    ${LCL_SOURCE_DIR}/zigbee/adapter/ZStack/ZigbeeNetworkProcessor.cpp
-    ${LCL_SOURCE_DIR}/zigbee/adapter/ZStack/ZnpCommands.cpp
-    ${LCL_SOURCE_DIR}/zigbee/adapter/ZStack/ZnpTypes.cpp
-)
-# Create executable
-add_executable(lcl ${LCL_SOURCES})
-
-# Link ASIO, Paho MQTT C, Paho MQTT C++, and threading
-target_link_libraries(lcl PRIVATE asio paho-mqtt3a paho-mqttpp3 Threads::Threads)
-
 # Set output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-# Enable warnings and optimizations
-if (CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang|MSVC")
-  target_compile_options(lcl PRIVATE -Wall -Wextra -Wpedantic)
-endif()
-
-# Install rules
-install(TARGETS lcl DESTINATION bin)
-install(DIRECTORY ${LCL_INCLUDE_DIR}/ DESTINATION include)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/tests)

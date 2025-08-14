@@ -28,12 +28,12 @@ namespace lcl::zigbee::adapter::zstack {
     }
     SET_VECTOR_AT_LITTLE_ENDIAN_U32(buffer, 1, bitmask);
 
-    return ZnpCommand { APP_CNF_BDB_SET_CHANNEL, SUBSYSTEM_APP_CNF, SREQ, buffer };
+    return ZnpCommand { MT_APP_CNF_BDB_SET_CHANNEL, SUBSYSTEM_APP_CNF, SREQ, buffer };
   }
 
   ZnpCommand appCnfBdbStartCommissioning(ZnpCommissioningMode mode) {
     auto buffer = std::vector(std::vector{ static_cast<uint8_t>(mode) });
-    return ZnpCommand { APP_CNF_BDB_START_COMMISSIONING, SUBSYSTEM_APP_CNF, SREQ, buffer };
+    return ZnpCommand { MT_APP_CNF_BDB_START_COMMISSIONING, SUBSYSTEM_APP_CNF, SREQ, buffer };
   }
 
   ZnpCommand sapiWriteConfiguration(

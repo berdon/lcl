@@ -7,9 +7,9 @@
 #include "asio/serial_port.hpp"
 #include "asio/ip/tcp.hpp"
 #include "result/Either.hpp"
+#include "result/TaskEither.hpp"
 
 namespace lcl::zigbee::adapter::zstack {
-#define CMD_ERROR(RETURN) Either<RETURN, ZnpCommandError>
   enum ZnpMemoryAlignment : uint8_t {
     ZNP_MEMORY_ALIGNMENT_UNALIGNED = 21,
     ZNP_MEMORY_ALIGNMENT_ALIGNED = 24
@@ -32,17 +32,17 @@ namespace lcl::zigbee::adapter::zstack {
     using ValueType = void;
   };
 
-  struct ZnpCommandError: Error<Command, void> {
-    using ErrorCodeType = Command;
+  struct ZnpCommandError: Error<MtCommandId, void> {
+    using ErrorCodeType = MtCommandId;
     using ValueType = void;
   };
 
   struct ZnpCommand {
-    Command commandId;
+    MtCommandId commandId;
     Subsystem subsystem;
     Type type;
     std::vector<uint8_t> data;
-    Command responseId = {};
+    MtCommandId responseId = {};
   };
 
   struct ConnectionOptions { };
@@ -61,7 +61,7 @@ namespace lcl::zigbee::adapter::zstack {
     std::optional<uint16_t> port;
     std::optional<std::string> device_path;
 
-    static ConnectionUri parse(const std::string &);
+  static ConnectionUri parse(const std::string &);
   };
 
   struct Payload {
@@ -69,31 +69,37 @@ namespace lcl::zigbee::adapter::zstack {
   };
 
   struct RawZnpResponse {
-    Command command;
+    MtCommandId command;
     Subsystem subsystem;
     Type type;
     std::vector<uint8_t> payload;
   };
 
+  template <typename T>
+  using TaskEitherCmd = TaskEither<T, ZnpCommandError>;
+
+  template <typename T>
+  using EitherCmd = Either<T, ZnpCommandError>;
+
   struct StatusableResponse {
     bool status;
 
-    [[nodiscard]] static CMD_ERROR(StatusableResponse) parse(const RawZnpResponse& response);
+    [[nodiscard]] static EitherCmd<StatusableResponse> parse(const RawZnpResponse& response);
 
     // TODO: Make status variables
-    [[nodiscard]] static CMD_ERROR(StatusableResponse) success();
-    [[nodiscard]] static CMD_ERROR(StatusableResponse) failure();
+    [[nodiscard]] static EitherCmd<StatusableResponse> success();
+    [[nodiscard]] static EitherCmd<StatusableResponse> failure();
   };
 
   struct SysOsalNvDeleteResponse {
     SysOsalNvDeleteStatus status;
 
-    [[nodiscard]] static CMD_ERROR(SysOsalNvDeleteResponse) parse(const RawZnpResponse& response);
+    [[nodiscard]] static EitherCmd<SysOsalNvDeleteResponse> parse(const RawZnpResponse& response);
   };
 
   struct SysPingResponse {
     std::set<Capability> capabilities;
-    [[nodiscard]] static CMD_ERROR(SysPingResponse) parse(const RawZnpResponse& response);
+    [[nodiscard]] static EitherCmd<SysPingResponse> parse(const RawZnpResponse& response);
   };
 
   struct SysVersionResponse {
@@ -102,7 +108,7 @@ namespace lcl::zigbee::adapter::zstack {
     uint8_t major_release;
     uint8_t minor_release;
     uint8_t maintenance_release;
-    [[nodiscard]] static CMD_ERROR(SysVersionResponse) parse(const RawZnpResponse& response);
+    [[nodiscard]] static EitherCmd<SysVersionResponse> parse(const RawZnpResponse& response);
   };
 
   struct SysResetCallback {
@@ -111,19 +117,19 @@ namespace lcl::zigbee::adapter::zstack {
     uint8_t major_release;
     uint8_t minor_release;
     uint8_t hardware_revision;
-    [[nodiscard]] static CMD_ERROR(SysResetCallback) parse(const RawZnpResponse& response);
+    [[nodiscard]] static EitherCmd<SysResetCallback> parse(const RawZnpResponse& response);
   };
 
   struct SysOsalNvLengthResponse {
     uint16_t length;
-    [[nodiscard]] static CMD_ERROR(SysOsalNvLengthResponse) parse(const RawZnpResponse& response);
+    [[nodiscard]] static EitherCmd<SysOsalNvLengthResponse> parse(const RawZnpResponse& response);
   };
 
   template<typename T>
   struct SysOsalNvReadResponse : StatusableResponse {
     T data;
 
-    [[nodiscard]] static CMD_ERROR(SysOsalNvReadResponse<T>) parse(const RawZnpResponse& response);
+    [[nodiscard]] static EitherCmd<SysOsalNvReadResponse> parse(const RawZnpResponse& response);
   };
 
   struct ZnpStartupOptions {
@@ -143,7 +149,7 @@ namespace lcl::zigbee::adapter::zstack {
       return {false, false, false};
     }
 
-    [[nodiscard]] static CMD_ERROR(ZnpStartupOptions) parse(const std::vector<uint8_t>& buffer, uint8_t offset, uint8_t length);
+    [[nodiscard]] static EitherCmd<ZnpStartupOptions> parse(const std::vector<uint8_t>& buffer, uint8_t offset, uint8_t length);
   };
 
   struct ZnpNetworkOptions {
@@ -275,6 +281,6 @@ namespace lcl::zigbee::adapter::zstack {
      */
     std::vector<uint16_t> associated_devices;
 
-    [[nodiscard]] static CMD_ERROR(GetDeviceInfoResponse) parse(const RawZnpResponse& response);
+    [[nodiscard]] static EitherCmd<GetDeviceInfoResponse> parse(const RawZnpResponse& response);
   };
 }

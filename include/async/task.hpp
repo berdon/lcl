@@ -18,7 +18,6 @@
 namespace lcl::async {
   // Simple thread pool implementation
   class thread_pool {
-  private:
     std::queue<std::function<void()>> tasks_;
     std::mutex mutex_;
     std::condition_variable cv_;
@@ -26,7 +25,7 @@ namespace lcl::async {
     std::atomic<bool> stop_{false};
 
   public:
-    explicit thread_pool(size_t num_threads = std::thread::hardware_concurrency()) {
+    explicit thread_pool(const size_t num_threads = std::thread::hardware_concurrency()) {
       for (size_t i = 0; i < num_threads; ++i) {
         workers_.emplace_back([this] {
           while (true) {
@@ -56,7 +55,7 @@ namespace lcl::async {
 
     void enqueue(std::function<void()> func) {
       {
-        std::unique_lock<std::mutex> lock(mutex_);
+        std::unique_lock lock(mutex_);
         if (stop_.load()) {
           throw std::runtime_error("Cannot enqueue on stopped thread pool");
         }
@@ -74,19 +73,19 @@ namespace lcl::async {
 
   // A task type for async operations
   template<typename T>
-  struct task {
+  struct Task {
     struct promise_type {
-      T value_;
+      std::optional<T> value_;
       std::exception_ptr exception_;
 
-      task get_return_object() { return {std::coroutine_handle<promise_type>::from_promise(*this)}; }
+      Task get_return_object() { return {std::coroutine_handle<promise_type>::from_promise(*this)}; }
       std::suspend_never initial_suspend() { return {}; }
       std::suspend_always final_suspend() noexcept { return {}; }
       void return_value(T value) { value_ = value; }
       void unhandled_exception() { exception_ = std::current_exception(); }
     };
 
-    bool await_ready() { return false; }
+    bool await_ready() { return handle_.done(); }
     void await_suspend(std::coroutine_handle<> handle) {
       get_thread_pool().enqueue([handle]() mutable {
         handle.resume();
@@ -95,7 +94,7 @@ namespace lcl::async {
     T await_resume() {
       auto& promise = handle_.promise();
       if (promise.exception_) std::rethrow_exception(promise.exception_);
-      return promise.value_;
+      return promise.value_.value();
     }
 
     std::coroutine_handle<promise_type> handle_;
@@ -103,24 +102,24 @@ namespace lcl::async {
 
   // Specialization for void return type
   template<>
-  struct task<void> {
+  struct Task<void> {
     struct promise_type {
       std::exception_ptr exception_;
 
-      task get_return_object() { return {std::coroutine_handle<promise_type>::from_promise(*this)}; }
+      Task get_return_object() { return {std::coroutine_handle<promise_type>::from_promise(*this)}; }
       std::suspend_never initial_suspend() { return {}; }
       std::suspend_always final_suspend() noexcept { return {}; }
       void return_void() {}
       void unhandled_exception() { exception_ = std::current_exception(); }
     };
 
-    bool await_ready() { return false; }
+    [[nodiscard]] bool await_ready() const { return handle_.done(); }
     void await_suspend(std::coroutine_handle<> handle) {
       get_thread_pool().enqueue([handle]() mutable {
         handle.resume();
       });
     }
-    void await_resume() {
+    void await_resume() const {
       auto& promise = handle_.promise();
       if (promise.exception_) std::rethrow_exception(promise.exception_);
     }
@@ -130,7 +129,7 @@ namespace lcl::async {
 
   // Deferred task for manual resolution
   template<typename T>
-  struct deferred_task {
+  struct DeferredTask {
     struct Promise {
       std::optional<T> value_;
       std::exception_ptr exception_;
@@ -170,19 +169,14 @@ namespace lcl::async {
     };
 
     // Constructor for manual resolution
-    deferred_task() : promise_(std::make_shared<Promise>()) {}
+    DeferredTask() : promise_(std::make_shared<Promise>()) {}
 
     // Constructor accepting a callable
-    explicit deferred_task(std::function<task<void>(resolver)> fn) : promise_(std::make_shared<Promise>()) {
+    explicit DeferredTask(std::function<Task<void>(resolver)> fn) : promise_(std::make_shared<Promise>()) {
       resolver res{promise_};
       try {
-        get_thread_pool().enqueue([fn = std::move(fn), res, promise = promise_]() mutable {
-          auto coro = fn(res);
-          get_thread_pool().enqueue([coro, promise]() mutable {
-            if (coro.handle_ && !coro.handle_.done()) {
-              coro.handle_.resume();
-            }
-          });
+        get_thread_pool().enqueue([fn = std::move(fn), res]() mutable {
+          fn(res);
         });
       } catch (...) {
         res.reject(std::current_exception());
@@ -219,7 +213,7 @@ namespace lcl::async {
 
   // Specialization for void return type
   template<>
-  struct deferred_task<void> {
+  struct DeferredTask<void> {
     struct Promise {
       std::exception_ptr exception_;
       std::coroutine_handle<> continuation_;
@@ -229,7 +223,7 @@ namespace lcl::async {
     struct resolver {
       std::shared_ptr<Promise> promise_;
 
-      void resolve() {
+      void resolve() const {
         if (promise_->is_resolved_) return;
         promise_->is_resolved_ = true;
         if (promise_->continuation_) {
@@ -239,7 +233,7 @@ namespace lcl::async {
         }
       }
 
-      void reject(std::exception_ptr ex) {
+      void reject(const std::exception_ptr &ex) const {
         if (promise_->is_resolved_) return;
         promise_->exception_ = ex;
         promise_->is_resolved_ = true;
@@ -257,30 +251,26 @@ namespace lcl::async {
     };
 
     // Constructor for manual resolution
-    deferred_task() : promise_(std::make_shared<Promise>()) {}
+    DeferredTask() : promise_(std::make_shared<Promise>()) {}
 
     // Constructor accepting a callable
-    explicit deferred_task(std::function<task<void>(resolver)> fn) : promise_(std::make_shared<Promise>()) {
+    explicit DeferredTask(std::function<Task<void>(resolver)> fn) : promise_(std::make_shared<Promise>()) {
       resolver res{promise_};
       try {
-        get_thread_pool().enqueue([fn = std::move(fn), res, promise = promise_]() mutable {
-          auto coro = fn(res);
-          get_thread_pool().enqueue([coro, promise]() mutable {
-            if (coro.handle_ && !coro.handle_.done()) {
-              coro.handle_.resume();
-            }
-          });
+        get_thread_pool().enqueue([fn = std::move(fn), res]() mutable {
+          // ReSharper disable once CppExpressionWithoutSideEffects
+          fn(res);
         });
       } catch (...) {
         res.reject(std::current_exception());
       }
     }
 
-    bool await_ready() {
+    [[nodiscard]] bool await_ready() const {
       return promise_->is_resolved_;
     }
 
-    void await_suspend(std::coroutine_handle<> handle) {
+    void await_suspend(std::coroutine_handle<> handle) const {
       if (promise_->is_resolved_) {
         get_thread_pool().enqueue([handle]() mutable {
           if (handle && !handle.done()) handle.resume();
@@ -290,16 +280,20 @@ namespace lcl::async {
       }
     }
 
-    void await_resume() {
+    void await_resume() const {
       if (promise_->exception_) {
         std::rethrow_exception(promise_->exception_);
       }
     }
 
-    resolver get_resolver() {
+    [[nodiscard]] resolver get_resolver() const {
       return {promise_};
     }
 
     std::shared_ptr<Promise> promise_;
   };
+
+  inline Task<void> yield() {
+    co_return;
+  }
 }

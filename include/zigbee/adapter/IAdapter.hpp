@@ -8,7 +8,7 @@
 #include <optional>
 
 #include "result/Either.hpp"
-#include "result/Errean.hpp"
+#include "result/TaskErrean.hpp"
 
 namespace lcl::zigbee::adapter {
   enum ErrorCodeAdapter: uint8_t {
@@ -24,6 +24,6 @@ namespace lcl::zigbee::adapter {
   class IAdapter {
   public:
     virtual ~IAdapter() = default;
-    virtual Errean<AdapterError> start() = 0;
+    virtual TaskErrean<AdapterError> start() = 0;
   };
 } // namespace lcl::provider

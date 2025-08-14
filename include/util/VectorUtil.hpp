@@ -41,3 +41,50 @@ for (const auto& byte : data) { \
 buffer.at(_index++) = byte; \
 } \
 } while (0)
+
+namespace lcl::util {
+  inline std::string toHexString(const std::string& input) {
+    std::string hex_str;
+    for (const unsigned char c : input) {
+      hex_str += std::format("{:02X} ", static_cast<unsigned int>(c));
+    }
+    if (!hex_str.empty()) hex_str.pop_back(); // Remove trailing space
+    return hex_str;
+  }
+
+  inline std::string toHexString(const std::array<uint8_t, 256> &buffer, const uint8_t size) {
+    std::string hex_str;
+    for (const auto *byte = buffer.begin(); byte != buffer.begin() + size; byte++) {
+      hex_str += std::format("{:02X} ", static_cast<unsigned int>(*byte));
+    }
+    if (!hex_str.empty()) hex_str.pop_back(); // Remove trailing space
+    return hex_str;
+  }
+
+  inline std::string toHexString(const std::vector<uint8_t> &buffer) {
+    std::string output;
+    for (const auto byte : buffer) {
+      output += std::format("{:02X} ", static_cast<unsigned int>(byte));
+    }
+    if (!output.empty()) output.pop_back(); // Remove trailing space
+    return output;
+  }
+
+  inline std::string toDecimalString(const std::vector<uint8_t> &buffer) {
+    std::string output;
+    for (const auto byte : buffer) {
+      output += std::format("{} ", static_cast<unsigned int>(byte));
+    }
+    if (!output.empty()) output.pop_back(); // Remove trailing space
+    return output;
+  }
+
+  inline std::string toDecimalString(const std::array<uint8_t, 256> &buffer, const uint8_t size) {
+    std::string output;
+    for (const auto *byte = buffer.begin(); byte != buffer.begin() + size; byte++) {
+      output += std::format("{} ", static_cast<unsigned int>(*byte));
+    }
+    if (!output.empty()) output.pop_back(); // Remove trailing space
+    return output;
+  }
+}

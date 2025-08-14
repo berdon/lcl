@@ -24,7 +24,7 @@ namespace lcl::cli {
         return cmd;
     }
 
-    Result CLI::ExecuteCommand(const Command& command, std::ostream& output) const {
+    async::Task<Result> CLI::ExecuteCommand(const Command& command, std::ostream& output) const {
         Result result{true, ""};
 
         try {
@@ -61,7 +61,7 @@ namespace lcl::cli {
             } else if (command.name == "test-zstack") {
                 try {
                     auto adapter = zigbee::adapter::ZStackAdapter("usb:///dev/tty.usbserial-1411340", {});
-                    if (!adapter.start()) {
+                    if (!co_await adapter.start()) {
                         std::cerr << "Failed to start Zigbee" << std::endl;
                     }
                     else {
@@ -83,6 +83,6 @@ namespace lcl::cli {
             result.errorMessage = e.what();
         }
 
-        return result;
+        co_return result;
     }
 } // namespace lcl::cli

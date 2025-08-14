@@ -16,6 +16,7 @@
 
 namespace lcl {
 #define RETURN_ON_FALSY(EITHER) if (!EITHER) return EITHER
+#define CORETURN_ON_FALSY(EITHER) if (!EITHER) co_return EITHER
 
   template <typename T>
   concept ErrorCode = std::same_as<T, std::uint8_t> ||

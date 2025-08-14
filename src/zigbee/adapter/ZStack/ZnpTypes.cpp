@@ -14,27 +14,27 @@ namespace lcl::zigbee::adapter::zstack {
     return string_representation.value();
   }
 
-  CMD_ERROR(StatusableResponse) StatusableResponse::parse(const RawZnpResponse &response) {
+  EitherCmd<StatusableResponse> StatusableResponse::parse(const RawZnpResponse &response) {
     auto typed_response = StatusableResponse { };
     typed_response.status = response.payload[0] == 0;
-    return CMD_ERROR(StatusableResponse)::value(typed_response);
+    return EitherCmd<StatusableResponse>::value(typed_response);
   }
 
-  Either<StatusableResponse, ZnpCommandError> StatusableResponse::success() {
-    return StatusableResponse {true};
+  EitherCmd<StatusableResponse> StatusableResponse::success() {
+    return EitherCmd<StatusableResponse>::value({true});
   }
 
-  Either<StatusableResponse, ZnpCommandError> StatusableResponse::failure() {
+  EitherCmd<StatusableResponse> StatusableResponse::failure() {
     return StatusableResponse {false};
   }
 
-  Either<SysOsalNvDeleteResponse, ZnpCommandError> SysOsalNvDeleteResponse::parse(const RawZnpResponse &response) {
+  EitherCmd<SysOsalNvDeleteResponse> SysOsalNvDeleteResponse::parse(const RawZnpResponse &response) {
     auto typed_response = SysOsalNvDeleteResponse { };
     typed_response.status = static_cast<SysOsalNvDeleteStatus>(response.payload[0]);
-    return CMD_ERROR(SysOsalNvDeleteResponse)::value(typed_response);
+    return EitherCmd<SysOsalNvDeleteResponse>::value(typed_response);
   }
 
-  CMD_ERROR(SysPingResponse) SysPingResponse::parse(const RawZnpResponse& response) {
+  EitherCmd<SysPingResponse> SysPingResponse::parse(const RawZnpResponse& response) {
     auto typed_response = SysPingResponse { };
     const auto capabilities = response.payload[0] << 8 | response.payload[1];
     if ((MT_CAP_SYS & capabilities) == MT_CAP_SYS) {
@@ -68,10 +68,10 @@ namespace lcl::zigbee::adapter::zstack {
       typed_response.capabilities.emplace(MT_CAP_ZOAD);
     }
 
-    return Either<SysPingResponse, ZnpCommandError>::value(typed_response);
+    return EitherCmd<SysPingResponse>::value(typed_response);
   }
 
-  CMD_ERROR(SysVersionResponse) SysVersionResponse::parse(const RawZnpResponse &response) {
+  EitherCmd<SysVersionResponse> SysVersionResponse::parse(const RawZnpResponse &response) {
     auto typed_response = SysVersionResponse { };
     typed_response.transport_protocol_revision = response.payload[0];
     typed_response.product_id = response.payload[1];
@@ -79,12 +79,12 @@ namespace lcl::zigbee::adapter::zstack {
     typed_response.minor_release = response.payload[3];
     typed_response.maintenance_release = response.payload[4];
 
-    return CMD_ERROR(SysVersionResponse)::value(typed_response);
+    return EitherCmd<SysVersionResponse>::value(typed_response);
   }
 
   template<>
-  Either<SysOsalNvReadResponse<std::vector<uint8_t>>, ZnpCommandError> SysOsalNvReadResponse<std::vector<uint8_t>>::parse(const RawZnpResponse &result) {
-    CMD_ERROR(SysOsalNvReadResponse) response = SysOsalNvReadResponse {};
+  EitherCmd<SysOsalNvReadResponse<std::vector<uint8_t>>> SysOsalNvReadResponse<std::vector<uint8_t>>::parse(const RawZnpResponse &result) {
+    EitherCmd response = SysOsalNvReadResponse {};
     response->status = result.payload[0] == 0;
     const auto length = result.payload[1];
     response->data = std::vector<uint8_t>(length);
@@ -92,7 +92,7 @@ namespace lcl::zigbee::adapter::zstack {
     return response;
   }
 
-  CMD_ERROR(SysResetCallback) SysResetCallback::parse(const RawZnpResponse& response) {
+  EitherCmd<SysResetCallback> SysResetCallback::parse(const RawZnpResponse& response) {
     auto typed_response = SysResetCallback { };
     typed_response.reason = static_cast<SysResetReason>(response.payload[0]);
     typed_response.transport_protocol_version = response.payload[1];
@@ -100,24 +100,24 @@ namespace lcl::zigbee::adapter::zstack {
     typed_response.minor_release = response.payload[3];
     typed_response.hardware_revision = response.payload[4];
 
-    return CMD_ERROR(SysResetCallback)::value(typed_response);
+    return EitherCmd<SysResetCallback>::value(typed_response);
   }
 
-  CMD_ERROR(SysOsalNvLengthResponse) SysOsalNvLengthResponse::parse(const RawZnpResponse& response) {
+  EitherCmd<SysOsalNvLengthResponse> SysOsalNvLengthResponse::parse(const RawZnpResponse& response) {
     auto typed_response = SysOsalNvLengthResponse { };
     typed_response.length = response.payload[1] << 8 | response.payload[0];
-    return CMD_ERROR(SysOsalNvLengthResponse)::value(typed_response);
+    return EitherCmd<SysOsalNvLengthResponse>::value(typed_response);
   }
 
-  CMD_ERROR(ZnpStartupOptions) ZnpStartupOptions::parse(const std::vector<uint8_t>& buffer, const uint8_t offset, uint8_t length) {
+  EitherCmd<ZnpStartupOptions> ZnpStartupOptions::parse(const std::vector<uint8_t>& buffer, const uint8_t offset, uint8_t length) {
     auto typed_response = ZnpStartupOptions { };
     typed_response.clearNetworkFrameCounter = ZCD_STARTOPT_CLEAR_NWK_FRAME_COUNTER == (buffer[offset + 0] & ZCD_STARTOPT_CLEAR_NWK_FRAME_COUNTER);
     typed_response.clearNetworkState = ZCD_STARTOPT_CLEAR_STATE == (buffer[offset + 0] & ZCD_STARTOPT_CLEAR_STATE);
     typed_response.clearDeviceConfiguration = ZCD_STARTOPT_CLEAR_CONFIG == (buffer[offset + 0] & ZCD_STARTOPT_CLEAR_CONFIG);
-    return CMD_ERROR(ZnpStartupOptions)::value(typed_response);
+    return EitherCmd<ZnpStartupOptions>::value(typed_response);
   }
 
-  CMD_ERROR(GetDeviceInfoResponse) GetDeviceInfoResponse::parse(const RawZnpResponse &response) {
+  EitherCmd<GetDeviceInfoResponse> GetDeviceInfoResponse::parse(const RawZnpResponse &response) {
     auto typed_response = GetDeviceInfoResponse { };
     auto index = 0;
     typed_response.status = response.payload.at(index++) == 0;
@@ -141,6 +141,6 @@ namespace lcl::zigbee::adapter::zstack {
       typed_response.associated_devices.push_back(device_address);
     }
 
-    return CMD_ERROR(GetDeviceInfoResponse)::value(typed_response);
+    return EitherCmd<GetDeviceInfoResponse>::value(typed_response);
   }
 }

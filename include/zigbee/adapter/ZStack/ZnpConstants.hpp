@@ -3,6 +3,7 @@
  * References:
  * [1]: https://csa-iot.org/wp-content/uploads/2023/04/05-3474-23-csg-zigbee-specification-compressed.pdf
  * [2]: https://github.com/Koenkk/zigbee-herdsman/blob/master/src/adapter/z-stack/constants/common.ts#L143
+ * [3]: /Applications/ti/simplelink_cc13xx_cc26xx_sdk_8_30_01_01/source/ti/zstack/mt/mt.h (see Z-Stack readme)
  */
 
 #pragma once
@@ -15,9 +16,24 @@ namespace lcl::zigbee::adapter::zstack {
     ZNP_VERSION_ZSTACK_30x = 2,
   };
 
-  enum Command: uint8_t {
-    APP_CNF_BDB_START_COMMISSIONING = 0x05,
-    APP_CNF_BDB_SET_CHANNEL = 0x08,
+  /**
+   * MonitorTest command IDs [3]
+   */
+  enum MtCommandId: uint8_t {
+    MT_APP_CNF_SET_DEFAULT_REMOTE_ENDDEVICE_TIMEOUT   = 0x01,
+    MT_APP_CNF_SET_ENDDEVICETIMEOUT                   = 0x02,
+    MT_APP_CNF_SET_ALLOWREJOIN_TC_POLICY              = 0x03,
+    MT_APP_CNF_BDB_ADD_INSTALLCODE                    = 0x04,
+    MT_APP_CNF_BDB_START_COMMISSIONING                = 0x05,
+    MT_APP_CNF_BDB_SET_JOINUSESINSTALLCODEKEY         = 0x06,
+    MT_APP_CNF_BDB_SET_ACTIVE_DEFAULT_CENTRALIZED_KEY = 0x07,
+    MT_APP_CNF_BDB_SET_CHANNEL                        = 0x08,
+    MT_APP_CNF_BDB_SET_TC_REQUIRE_KEY_EXCHANGE        = 0x09,
+    MT_APP_CNF_BDB_RECOVER_NWK                        = 0x0A,
+    MT_APP_CNF_BDB_SET_DEFAULT_PARENT_INFO            = 0x0B,
+    MT_APP_CNF_SET_POLL_RATE_TYPE                     = 0x0C,
+    MT_APP_CNF_BDB_COMMISSIONING_NOTIFICATION         = 0x80,
+    MT_APP_CNF_SET_NWK_FRAME_COUNTER                  = 0xFF,
 
     SAPI_WRITE_CONFIGURATION = 0x05,
 
